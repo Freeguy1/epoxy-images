@@ -1,0 +1,55 @@
+#!/bin/bash
+
+set -uex
+
+FREE_SPACE=4096
+ISOFS=thingdir
+BUILDTMP=$(mktemp -d /tmp/bootcd.XXXXXX)
+USB_NAME=epoxy-usb
+boot_params=
+initramfs_config=
+
+
+function build_usb() {
+    echo -n "* Creating USB image... "
+    local usb="$1" ; shift
+    # local custom="$1"
+
+    rm -f "$usb"
+    mkfs.vfat -C "$usb" $(($(du -Lsk $ISOFS | awk '{ print $1; }') + $FREE_SPACE))
+
+    cat >${BUILDTMP}/mtools.conf<<EOF
+mtools_skip_check=1
+EOF
+    # environment variable for mtools
+    export MTOOLSRC="${BUILDTMP}/mtools.conf"
+
+    # Use syslinux instead of isolinux to make the image bootable
+    tmp="${ISOFS}/syslinux.cfg"
+    cat >$tmp <<EOF
+SAY ePoxy ISO boot image: $USB_NAME
+SAY Kernel parameters: $boot_params
+TIMEOUT 30
+DEFAULT linux
+
+LABEL linux
+ KERNEL vmlinuz
+ APPEND $boot_params
+ $initramfs_config
+EOF
+
+    # Populate it
+    echo -n " populating USB image... "
+    mcopy -bsQ -i "$usb" "$ISOFS"/* ::/
+    # APPEND ramdisk_size=$ramdisk_size
+    # mdel -i "$usb" ::/isolinux.cfg 2>/dev/null || :
+    # mcopy -i "$usb" "$tmp" ::/syslinux.cfg
+    rm -f "$tmp"
+    rm -f "${MTOOLSRC}"
+    unset MTOOLSRC
+
+    echo "making USB image bootable."
+    syslinux "$usb"
+}
+
+build_usb out.usb
