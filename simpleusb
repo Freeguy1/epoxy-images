@@ -1,33 +1,72 @@
 #!/bin/bash
+#
+# Generate a basic USB boot image from vmlinuz & initramfs.
 
 set -uex
 
+# Optional parameters.
+INITRAMFS=
+BOOT_PARAMS=
+
+# Constants
 FREE_SPACE=4096
-ISOFS=thingdir
-BUILDTMP=$(mktemp -d /tmp/bootcd.XXXXXX)
-USB_NAME=epoxy-usb
 boot_params=
 initramfs_config=
 
 
-function build_usb() {
-    echo -n "* Creating USB image... "
-    local usb="$1" ; shift
-    # local custom="$1"
+function help() {
+  echo "usage: ${0} [OPTIONS] vmlinuz usbname"
+  echo
+  echo "where OPTIONS are:"
+  echo " -h       show this help"
+  echo " -i FILE  initramfs filesystem image for kernel"
+  echo " -x ARGS  extra kernel command line args"
+}
 
-    rm -f "$usb"
-    mkfs.vfat -C "$usb" $(($(du -Lsk $ISOFS | awk '{ print $1; }') + $FREE_SPACE))
 
-    cat >${BUILDTMP}/mtools.conf<<EOF
-mtools_skip_check=1
-EOF
-    # environment variable for mtools
-    export MTOOLSRC="${BUILDTMP}/mtools.conf"
+# Parse command line parameters.
+while getopts "hi:x:" opt; do
+  case ${opt} in
+    h)
+      help
+      exit 0
+      ;;
+    i)
+      INITRAMFS="${OPTARG}"
+      ;;
+    x)
+      BOOT_PARAMS="${OPTARG}"
+      ;;
+  esac
+done
 
-    # Use syslinux instead of isolinux to make the image bootable
-    tmp="${ISOFS}/syslinux.cfg"
-    cat >$tmp <<EOF
-SAY ePoxy ISO boot image: $USB_NAME
+# Adjust positional parameters after processing with getopts.
+shift $((OPTIND - 1))
+
+# Assign positional parameters.
+VMLINUZ=${1:?Error: Please provide a vmlinuz image}
+USB_NAME=${2:?Error: Please provide a USB output file name}
+
+
+function setup_usbfs() {
+  local usbfs_dir=$1
+  local vmlinuz=$2
+  local initramfs=$3
+  local boot_params=$4
+
+  local cfg=${usbfs_dir}/syslinux.cfg
+  local initramfs_config=
+
+  # Setup the filesystem.
+  cp $vmlinuz ${usbfs_dir}/vmlinuz
+  if test -f "$initramfs" ; then
+      cp $initramfs ${usbfs_dir}/initramfs
+      initramfs_config="INITRD initramfs"
+  fi
+
+  # Use syslinux to make the image bootable
+  cat >$cfg <<EOF
+SAY ePoxy USB boot image: $USB_NAME
 SAY Kernel parameters: $boot_params
 TIMEOUT 30
 DEFAULT linux
@@ -38,18 +77,55 @@ LABEL linux
  $initramfs_config
 EOF
 
-    # Populate it
-    echo -n " populating USB image... "
-    mcopy -bsQ -i "$usb" "$ISOFS"/* ::/
-    # APPEND ramdisk_size=$ramdisk_size
-    # mdel -i "$usb" ::/isolinux.cfg 2>/dev/null || :
-    # mcopy -i "$usb" "$tmp" ::/syslinux.cfg
-    rm -f "$tmp"
-    rm -f "${MTOOLSRC}"
-    unset MTOOLSRC
-
-    echo "making USB image bootable."
-    syslinux "$usb"
 }
 
-build_usb out.usb
+function create_usb() {
+  local usbdir=$1
+  local usbfile=$2
+
+  rm -f "${usbfile}"
+
+
+  # Disable some sanity checks in mtools.
+  export MTOOLS_SKIP_CHECK=1
+#  cat >${usbdir}/mtools.conf <<EOF
+#mtools_skip_check=1
+#EOF
+
+  # Create a vfat local file large enough to hold all the data in usbdir.
+  mkfs.vfat -C "${usbfile}" \
+    $(( $(du -Lsk ${usbdir} | awk '{ print $1; }') + $FREE_SPACE ))
+
+  # Environment variable for mtools
+  # export MTOOLSRC="${BUILDTMP}/mtools.conf"
+
+  # Copy files to the USB image.
+  # -b is batch mode.
+  # -s is recursive copy
+  # -Q is quit on first copy failure.
+  mcopy -bsQ -i "${usbfile}" "${usbdir}"/* ::/
+
+  # APPEND ramdisk_size=$ramdisk_size
+  # mdel -i "$usb" ::/isolinux.cfg 2>/dev/null || :
+  # mcopy -i "$usb" "$tmp" ::/syslinux.cfg
+  #rm -f "$tmp"
+  #rm -f "${MTOOLSRC}"
+  #unset MTOOLSRC
+
+  # Make the USB image bootable.
+  syslinux "${usbfile}"
+}
+
+function main() {
+  local usbdir=$( mktemp -d /tmp/usb.dir.XXXXXX )
+
+  setup_usbfs ${usbdir} ${VMLINUZ} "${INITRAMFS}" "${BOOT_PARAMS}"
+
+  # Generate the USB image.
+  create_usb "${usbdir}" "${USB_NAME}"
+
+  # Clean up temporary directory.
+  rm -fr "${usbdir}"
+}
+
+main
