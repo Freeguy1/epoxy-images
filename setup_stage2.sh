@@ -465,6 +465,8 @@ function main() {
 
   report "Copying epoxy_client"
   install -D -m 644 $BUILD_DIR/local/upx/epoxy_client $EPOXY_CLIENT
+
+  report "Successful build!"
 }
 
 main
