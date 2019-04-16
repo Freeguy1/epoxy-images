@@ -56,4 +56,4 @@ fi
 ARGS+="epoxy.stage1=https://epoxy-boot-api.{{project}}.measurementlab.net/v1/boot/{{hostname}}/stage1.json"
 
 ${SOURCE_DIR}/simpleusb -x "$ARGS" "${IMAGE_DIR}/stage2_vmlinuz" \
-    ${OUTPUT_DIR}/{{hostname}}_stage1.iso
+    ${OUTPUT_DIR}/{{hostname}}_stage1.usb
