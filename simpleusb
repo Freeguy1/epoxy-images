@@ -79,6 +79,44 @@ EOF
 
 }
 
+function build_usb_partition() {
+  local usbdir=$1
+  local usbfile=$2
+  local tmp=$( mktemp --directory )
+
+  local size=$(($(du -Lsk ${usbdir} | awk '{ print $1; }') + $FREE_SPACE))
+  size=$(( $size / 1024 ))
+
+  local heads=64
+  local sectors=32
+  local cylinders=$(( ($size*1024*2)/($heads*$sectors) ))
+  local offset=$(( $sectors*512 ))
+
+  mkdiskimage -M -4 "$usbfile" $size $heads $sectors
+
+  cat >$tmp/mtools.conf<<EOF
+drive z:
+file="${usbfile}"
+cylinders=$cylinders
+heads=$heads
+sectors=$sectors
+offset=$offset
+mformat_only
+mtools_skip_check=1
+EOF
+  export MTOOLSRC="${tmp}/mtools.conf"
+  cat $MTOOLSRC
+
+  echo -n " populating USB image... "
+  mcopy -bsQ -i "${usbfile}" "${usbdir}"/* z:/
+
+  rm -f "${MTOOLSRC}"
+  unset MTOOLSRC
+
+  echo "making USB image bootable."
+  syslinux --offset $offset "$usbfile"
+}
+
 function create_usb() {
   local usbdir=$1
   local usbfile=$2
@@ -122,7 +160,7 @@ function main() {
   setup_usbfs ${usbdir} ${VMLINUZ} "${INITRAMFS}" "${BOOT_PARAMS}"
 
   # Generate the USB image.
-  create_usb "${usbdir}" "${USB_NAME}"
+  build_usb_partition "${usbdir}" "${USB_NAME}"
 
   # Clean up temporary directory.
   rm -fr "${usbdir}"
