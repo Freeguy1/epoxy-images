@@ -228,3 +228,6 @@ pushd $BOOTSTRAP
 popd
 # Copy file to output with all read permissions.
 install -m 0644 ${OUTPUT_KERNEL} ${OUTPUT_INITRAM} ${OUTPUT_DIR}
+
+echo "Success: ${OUTPUT_KERNEL}"
+echo "Success: ${OUTPUT_INITRAM}"
