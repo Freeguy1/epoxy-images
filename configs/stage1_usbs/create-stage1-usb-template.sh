@@ -61,11 +61,11 @@ ARGS+="epoxy.stage1=https://epoxy-boot-api.{{project}}.measurementlab.net/v1/boo
 #       --config-kernel-bootargs BOOTARGS
 
 # If using stage2 vmlinuz kernel.
-# ${SOURCE_DIR}/simpleusb -x "$ARGS" "${IMAGE_DIR}/stage2_vmlinuz" \
-#     ${OUTPUT_DIR}/{{hostname}}_stage1.usb
+${SOURCE_DIR}/simpleusb -x "$ARGS" "${IMAGE_DIR}/stage2_vmlinuz" \
+    ${OUTPUT_DIR}/{{hostname}}_stage1.usb
 
 # If using stage3_mlxupdate images.
-${SOURCE_DIR}/simpleusb -x "$ARGS" \
-    -i "${IMAGE_DIR}"/initramfs_stage3_mlxupdate.cpio.gz \
-    "${IMAGE_DIR}/vmlinuz_stage3_mlxupdate" \
-    ${OUTPUT_DIR}/{{hostname}}_stage1.usb
+#${SOURCE_DIR}/simpleusb -x "$ARGS" \
+#    -i "${IMAGE_DIR}"/initramfs_stage3_mlxupdate.cpio.gz \
+#    "${IMAGE_DIR}/vmlinuz_stage3_mlxupdate" \
+#    ${OUTPUT_DIR}/{{hostname}}_stage1.usb
