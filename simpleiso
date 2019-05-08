@@ -91,6 +91,8 @@ LABEL linux
 EOF
 
   # Copy isolinux bootloader.
+  #mkdir -p ${isofs_dir}/isolinux
+  #cp ${ISOLINUX_BIN} ${isofs_dir}/isolinux
   cp ${ISOLINUX_BIN} ${isofs_dir}
 
   # Syslinux 6.x requires the LDLINUX_C32 file.
@@ -106,6 +108,19 @@ function main() {
   # Generate the ISO image.
   $MKISOFS $MKISOFS_FLAGS -eltorito-boot isolinux.bin -no-emul-boot \
       -boot-load-size 4 -boot-info-table -output ${ISO_NAME} ${isodir}
+
+  #MKISOFS_FLAGS="-quiet -l -volid 'ePoxyISO' -preparer 'ePoxy-images'"
+  #MKISOFS_FLAGS="$MKISOFS_FLAGS -appid 'ePoxy' -publisher 'M-Lab'"
+  #MKISOFS_FLAGS="$MKISOFS_FLAGS -eltorito-catalog boot.cat"
+  #cp /workspace/efiboot.img ${isodir}
+  #mkisofs -U -A "MyLinux_1 x86_64" -V "MyLinux_1 x86_64 Disc 1" \
+  #  -volset "MyLinux_1 x86_64" -J -joliet-long -r -v -T \
+  #  -o ${ISO_NAME}.2 \
+  #  -b isolinux/isolinux.bin \
+  #  -no-emul-boot -boot-load-size 4 \
+  #  -boot-info-table -eltorito-alt-boot \
+  #  -e efiboot.img -no-emul-boot ${isodir}
+# -c ${isodir}/isolinux/boot.cat \
 
   # Clean up temporary directory.
   rm -fr ${isodir}
