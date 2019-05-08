@@ -62,6 +62,7 @@ function setup_usbfs() {
   if test -f "$initramfs" ; then
       cp $initramfs ${usbfs_dir}/initramfs
       initramfs_config="INITRD initramfs"
+      initramfs_config_efi="initrdefi /efi/boot/initramfs"
   fi
 
   # Use syslinux to make the image bootable
@@ -83,17 +84,9 @@ EOF
 set timeout=5
 set color_highlight=black/light-magenta
 
-menuentry 'linuxefi: vmlinuz' {
-    linuxefi /efi/boot/vmlinuz $boot_params
-}
-menuentry 'linuxefi: vmlinuz.efi' {
+menuentry 'stage1 linuxefi: vmlinuz' {
     linuxefi /efi/boot/vmlinuz.efi $boot_params
-}
-menuentry 'linux: vmlinuz.efi' {
-    linux /efi/boot/vmlinuz.efi $boot_params
-}
-menuentry 'linux: vmlinuz' {
-    linux /efi/boot/vmlinuz $boot_params
+    $initramfs_config_efi
 }
 submenu 'Useful snippets' {
     menuentry 'Ubuntu' {
@@ -152,9 +145,9 @@ function make_efi_usb() {
 
   local size=$(($(du -Lsk ${usbdir} | awk '{ print $1; }') + $FREE_SPACE))
 
-  # Creates an empty disk image of 26MB, creates its GPT, and then it makes
+  # Creates an empty disk image, create its GPT, and then make
   # one partition. Partitions should be aligned.
-  dd if=/dev/zero of=${usbfile} bs=1M count=140
+  dd if=/dev/zero of=${usbfile} bs=1M count=160
   parted ${usbfile} \
     mktable gpt \
     mkpart primary fat32 2048s 100% \
@@ -184,21 +177,15 @@ function make_efi_usb() {
       efi_uga ls search search_label search_fs_uuid search_fs_file gfxterm \
       gfxterm_background gfxterm_menu test all_video loadenv exfat ext2 ntfs udf
 
-#  grub-mkimage -o bootia32.efi -p /efi/boot -O i386-efi fat iso9660 part_gpt  \
-#      part_msdos  normal boot linux linuxefi efinet lsefi lsefisystab lsefimmap configfile loopback chain efifwsetup efi_gop \
-#      efi_uga ls search search_label search_fs_uuid search_fs_file gfxterm \
-#      gfxterm_background gfxterm_menu test all_video loadenv exfat ext2 ntfs udf
+  grub-mkimage -o bootia32.efi -p /efi/boot -O i386-efi fat iso9660 part_gpt  \
+      part_msdos  normal boot linux linuxefi efinet lsefi lsefisystab lsefimmap configfile loopback chain efifwsetup efi_gop \
+      efi_uga ls search search_label search_fs_uuid search_fs_file gfxterm \
+      gfxterm_background gfxterm_menu test all_video loadenv exfat ext2 ntfs udf
 
   echo -n " Copying files to USB image... "
   mcopy -bsQ -i ${usbfile}@@${offset} bootx64.efi ::/efi/boot
-  mcopy -bsQ -i ${usbfile}@@${offset} bootia32.efi ::/efi/boot
+  # mcopy -bsQ -i ${usbfile}@@${offset} bootia32.efi ::/efi/boot
   mcopy -bsQ -i ${usbfile}@@${offset} "${usbdir}"/* ::/efi/boot
-
-  # TODO: remove
-  mcopy -bsQ -i ${usbfile}@@${offset} /workspace/output/vmlinuz_stage3_coreos ::/efi/boot
-  mcopy -bsQ -i ${usbfile}@@${offset} /workspace/output/vmlinuz_stage3_coreos ::/efi/boot/vmlinuz_stage3_coreos.efi
-  mcopy -bsQ -i ${usbfile}@@${offset} /workspace/output/vmlinuz_stage3_mlxupdate ::/efi/boot
-  mcopy -bsQ -i ${usbfile}@@${offset} /workspace/output/vmlinuz_stage3_mlxupdate ::/efi/boot/vmlinuz_stage3_mlxupdate.efi
 
   # NOTE: modprobe dm-mod must be loaded.
   # Maps and mounts the two partitions in disk.img to /dev/mapper/loop0p1.
