@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# setup_stage1_usb.sh generates per-machine USB images.
+# setup_stage1_usbs.sh generates per-machine USB images.
 #
-# setup_stage1_usb.sh should only be run after setup_stage2.sh has run
+# setup_stage1_usbs.sh should only be run after setup_stage2.sh has run
 # successfully and the stage2_vmlinuz kernel is available.
 
 SOURCE_DIR=$( realpath $( dirname "${BASH_SOURCE[0]}" ) )
