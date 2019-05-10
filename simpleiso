@@ -73,7 +73,7 @@ function setup_isofs() {
   # Setup the mkisofs filesystem.
   cp $vmlinuz ${isofs_dir}/vmlinuz
   if test -f "$initramfs" ; then
-      cp $initramfs ${isofs_dir}/initramfs
+#      cp $initramfs ${isofs_dir}/initramfs
       initramfs_config="INITRD initramfs"
   fi
 
@@ -91,9 +91,10 @@ LABEL linux
 EOF
 
   # Copy isolinux bootloader.
-  #mkdir -p ${isofs_dir}/isolinux
-  #cp ${ISOLINUX_BIN} ${isofs_dir}/isolinux
-  cp ${ISOLINUX_BIN} ${isofs_dir}
+  mkdir -p ${isofs_dir}/isolinux
+  cp ${ISOLINUX_BIN} ${isofs_dir}/isolinux
+  #cp ${ISOLINUX_BIN} ${isofs_dir}
+  cp /workspace/output/efiboot.img ${isofs_dir}
 
   # Syslinux 6.x requires the LDLINUX_C32 file.
   cp ${LDLINUX_C32} ${isofs_dir}
@@ -106,21 +107,33 @@ function main() {
   setup_isofs $isodir $VMLINUZ "$INITRAMFS" "${BOOT_PARAMS}"
 
   # Generate the ISO image.
-  $MKISOFS $MKISOFS_FLAGS -eltorito-boot isolinux.bin -no-emul-boot \
-      -boot-load-size 4 -boot-info-table -output ${ISO_NAME} ${isodir}
+  #$MKISOFS $MKISOFS_FLAGS -eltorito-boot isolinux.bin -no-emul-boot \
+  #    -boot-load-size 4 -boot-info-table -output ${ISO_NAME} ${isodir}
 
   #MKISOFS_FLAGS="-quiet -l -volid 'ePoxyISO' -preparer 'ePoxy-images'"
   #MKISOFS_FLAGS="$MKISOFS_FLAGS -appid 'ePoxy' -publisher 'M-Lab'"
   #MKISOFS_FLAGS="$MKISOFS_FLAGS -eltorito-catalog boot.cat"
   #cp /workspace/efiboot.img ${isodir}
-  #mkisofs -U -A "MyLinux_1 x86_64" -V "MyLinux_1 x86_64 Disc 1" \
-  #  -volset "MyLinux_1 x86_64" -J -joliet-long -r -v -T \
-  #  -o ${ISO_NAME}.2 \
-  #  -b isolinux/isolinux.bin \
-  #  -no-emul-boot -boot-load-size 4 \
-  #  -boot-info-table -eltorito-alt-boot \
-  #  -e efiboot.img -no-emul-boot ${isodir}
-# -c ${isodir}/isolinux/boot.cat \
+
+  #mkisofs -eltorito-boot isolinux.bin -no-emul-boot \
+  #    -quiet -l -volid 'ePoxyISO' -preparer 'ePoxy-images' \
+  #    -appid 'ePoxy' -publisher 'M-Lab' \
+  #    -eltorito-catalog boot.cat \
+  #    -boot-load-size 4 -boot-info-table -output ${ISO_NAME} ${isodir}
+
+  mkisofs -untranslated-filenames \
+      -appid "MyLinux_1 x86_64" \
+      -volid "MyLinux_1 x86_64 Disc 1" \
+      -volset "MyLinux_1 x86_64" \
+      -joliet -joliet-long \
+      -rational-rock -verbose -translation-table \
+      -output ${ISO_NAME} \
+      -eltorito-boot isolinux/isolinux.bin -eltorito-catalog isolinux/boot.cat \
+      -no-emul-boot -boot-load-size 4 -boot-info-table \
+      -eltorito-alt-boot -e efiboot.img -no-emul-boot ${isodir}
+
+#        -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 \
+#        -boot-info-table -eltorito-alt-boot -e images/efiboot.img -no-emul-boot .
 
   # Clean up temporary directory.
   rm -fr ${isodir}
