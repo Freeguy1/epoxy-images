@@ -159,13 +159,13 @@ function main() {
       -verbose \
       -translation-table \
       -output ${ISO_NAME} \
-      -eltorito-boot isolinux/isolinux.bin \
-      -eltorito-catalog isolinux/boot.cat \
-      -no-emul-boot \
+      -b isolinux/isolinux.bin \
+      -c isolinux/boot.cat \
+      -eltorito-alt-boot
+      -eltorito-platform 0xEF \
+      -eltorito-boot efiboot.img \
       -boot-load-size 4 \
       -boot-info-table \
-      -eltorito-alt-boot \
-      -efi-boot efiboot.img \
       -no-emul-boot ${isodir}
 
   # Run isohybrid on the generated ISO. This makes it bootable regardless of
